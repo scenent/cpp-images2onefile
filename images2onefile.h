@@ -15,11 +15,13 @@
 #include <zlib.h>
 
 struct ImageData {
+    std::string name;
     int width, height, channels;
     std::vector<unsigned char> data;
 };
 
-static bool load_image(__in const std::string& path, __out ImageData& img) {
+static bool load_image(__in const std::string& path, __in const char* name, __out ImageData& img) {
+    img.name = name;
     int width, height, channels;
     unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
     if (data != nullptr) {
@@ -40,16 +42,20 @@ static bool compress_images(__in const std::vector<ImageData>& images, __in cons
         return false;
     }
     for (const auto& img : images) {
+        size_t name_length = img.name.size();
+        file.write(reinterpret_cast<const char*>(&name_length), sizeof(name_length));
+        file.write(img.name.c_str(), name_length);
+
         file.write(reinterpret_cast<const char*>(&img.width), sizeof(img.width));
         file.write(reinterpret_cast<const char*>(&img.height), sizeof(img.height));
         file.write(reinterpret_cast<const char*>(&img.channels), sizeof(img.channels));
-        
+
         uLongf compressed_size = compressBound(img.data.size());
         std::vector<unsigned char> compressed_data(compressed_size);
         if (compress2(compressed_data.data(), &compressed_size, img.data.data(), img.data.size(), Z_BEST_COMPRESSION) != Z_OK) {
             return false;
         }
-        
+
         file.write(reinterpret_cast<const char*>(&compressed_size), sizeof(compressed_size));
         file.write(reinterpret_cast<const char*>(compressed_data.data()), compressed_size);
     }
@@ -64,21 +70,32 @@ static bool decompress_images(__in const std::string& inputPath, __out std::vect
     }
     while (!file.eof()) {
         ImageData img;
+
+        size_t name_length;
+        file.read(reinterpret_cast<char*>(&name_length), sizeof(name_length));
+
+        img.name.resize(name_length);
+        file.read(&img.name[0], name_length);
+
         file.read(reinterpret_cast<char*>(&img.width), sizeof(img.width));
         file.read(reinterpret_cast<char*>(&img.height), sizeof(img.height));
         file.read(reinterpret_cast<char*>(&img.channels), sizeof(img.channels));
 
         uLongf compressed_size;
         file.read(reinterpret_cast<char*>(&compressed_size), sizeof(compressed_size));
-        
+
         std::vector<unsigned char> compressed_data(compressed_size);
         file.read(reinterpret_cast<char*>(compressed_data.data()), compressed_size);
-        
+
         uLongf decompressed_size = img.width * img.height * img.channels;
         img.data.resize(decompressed_size);
+
         uncompress(img.data.data(), &decompressed_size, compressed_data.data(), compressed_size);
+
         images.push_back(img);
     }
+
     images.erase(images.end() - 1);
+
     return true;
 }
