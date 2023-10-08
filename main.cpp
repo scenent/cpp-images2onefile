@@ -11,8 +11,8 @@ std::string get_current_path() {
 int main(int argc, const char* argv[]) {
     /* target image paths here */
     std::vector<std::string> img_paths = { 
-        get_current_path() + "\\image1.png",
-        get_current_path() + "\\image2.jpg"
+        "image1.png",
+        "image2.jpg"
     };
     /* target data file path here */
     std::string target_path = get_current_path() + "\\output.data";
@@ -21,7 +21,7 @@ int main(int argc, const char* argv[]) {
     std::vector<ImageData> input_images;
     for (const auto& path : img_paths) {
         ImageData img;
-        if (load_image(path, img)) input_images.push_back(img);
+        if (load_image(getCurrentPath() + "\\" + path, path.c_str(), img)) input_images.push_back(img);
         else std::cout << "failed to load image : " << path << "\n";
     }
     if (!compress_images(input_images, target_path)) {
@@ -36,9 +36,8 @@ int main(int argc, const char* argv[]) {
     // re-write the image files (only supports .png and .jpg)
     for (size_t i = 0; i < output_images.size(); ++i) {
         const auto& img = output_images[i];
-        std::string new_output_path = get_current_path() + "\\output" + std::to_string(i) + ".png";
+        std::string new_output_path = get_current_path() + "\\" + img.name;
         if (img.channels == 3) {
-            new_output_path = get_current_path() + "\\output" + std::to_string(i) + ".jpg";
             stbi_write_jpg(new_output_path.c_str(), img.width, img.height, img.channels, img.data.data(), 100);
             continue;
         }
