@@ -21,7 +21,7 @@ int main(int argc, const char* argv[]) {
     std::vector<ImageData> input_images;
     for (const auto& path : img_paths) {
         ImageData img;
-        if (load_image(getCurrentPath() + "\\" + path, path.c_str(), img)) input_images.push_back(img);
+        if (load_image(get_current_path() + "\\" + path, path.c_str(), img)) input_images.push_back(img);
         else std::cout << "failed to load image : " << path << "\n";
     }
     if (!compress_images(input_images, target_path)) {
